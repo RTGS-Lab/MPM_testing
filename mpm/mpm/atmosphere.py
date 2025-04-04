@@ -1,0 +1,52 @@
+"""Atmosphere module for calculating atmospheric properties."""
+
+import numpy as np
+
+class Atmosphere:
+    """This class is aware of time and location and
+    uses this to compute atmospheric properties for the simulation.
+    Atmospheric properties are computed using equations from:
+    Teh, C.B., 2006. Introduction to mathematical modeling of crop growth: How the equations are derived and assembled into a computer model. Dissertation. com.
+    """
+
+    def __init__(self, DOY, latitude, hour):
+        self.__rad = np.pi / 180
+        self.__lat = latitude
+        self.__doy = DOY
+        self.__hour = hour
+
+    def compute_atmospheric_properties(self):
+        """Computes atmospheric properties needed for simulating under field conditions."""
+
+        Sun_Angle_Inclination = -2
+        dec = np.arcsin(np.sin(23.45 * self.__rad) * np.cos(2 * np.pi * (self.__doy + 10) / 365))
+        Sin_Solar_Declination = np.sin(self.__rad * self.__lat) * np.sin(dec)
+        Cos_Solar_Declination = np.cos(self.__rad * self.__lat) * np.cos(dec)
+        angle_factor = Sin_Solar_Declination / Cos_Solar_Declination
+
+        Day_Length = 12.0 * (1 + 2 * np.arcsin(angle_factor) / np.pi)
+        Photoperiod_Day_Length = 12.0 * (1 + 2 * np.arcsin((-np.sin(Sun_Angle_Inclination * self.__rad) + Sin_Solar_Declination) / Cos_Solar_Declination) / np.pi)
+        Daily_Sin_Beam_Exposure = 3600 * (Day_Length * (Sin_Solar_Declination + 0.4 * (Sin_Solar_Declination**2 + Cos_Solar_Declination**2 * 0.5)) +
+                             12.0 * Cos_Solar_Declination * (2.0 + 3.0 * 0.4 * Sin_Solar_Declination) * np.sqrt(1.0 - angle_factor**2) / np.pi)
+        Solar_Constant = 1367 * (1 + 0.033 * np.cos(2 * np.pi * (self.__doy - 10) / 365))
+
+        hour_angle = (self.__hour - 12) * 15 * self.__rad
+        Sin_Beam = max(1e-32, Sin_Solar_Declination * np.sin(hour_angle) + Cos_Solar_Declination * np.cos(hour_angle))
+
+        self.__atmospheric_properties_dict = {
+            'Solar_Constant': Solar_Constant,
+            'Sin_Solar_Declination': Sin_Solar_Declination,
+            'Cos_Solar_Declination': Cos_Solar_Declination,
+            'Day_Length': Day_Length,
+            'Photoperiod_Day_Length': Photoperiod_Day_Length,
+            'Daily_Sin_Beam_Exposure': Daily_Sin_Beam_Exposure,
+            'Sin_Beam': Sin_Beam
+        }
+
+    def get_atmospheric_properties(self):
+        """Get the atmospheric properties dictionary.
+        
+        Returns:
+            dict: Dictionary of calculated atmospheric properties.
+        """
+        return self.__atmospheric_properties_dict

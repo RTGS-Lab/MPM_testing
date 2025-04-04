@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mpm"
+version = "0.1.0"
+authors = [
+    {name = "Bryan Runck", email = "runck014@umn.edu"},
+]
+description = "Minimum Plant Model (MPM) - A modular framework for simulating plant growth"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering"
+]
+
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/DRWang3/MPM_testing"
+"Bug Tracker" = "https://github.com/DRWang3/MPM_testing/issues"
