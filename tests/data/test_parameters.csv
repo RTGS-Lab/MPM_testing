@@ -1,0 +1,10 @@
+parameter,value
+leaf_mass_per_area,0.02
+ER_ref,0.5
+Q10,2.0
+T_ref,20.0
+light_use_efficiency,0.5
+temperature_min,5.0
+temperature_max,35.0
+radiation_max,25.0
+latitude,45.0

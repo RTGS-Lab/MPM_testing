@@ -1,0 +1,3 @@
+pool,initial_mass,max_mass,growth_rate
+canopy,0.1,10.0,0.1
+roots,0.1,5.0,0.08
