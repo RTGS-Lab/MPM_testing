@@ -39,7 +39,7 @@ class ResourcePool:
         self.name = name
         self.is_initiated = False
         self.thermal_time_initiation = thermal_time_initiation
-        self.allocation_priority = allocation_priority
+        self.growth_allocation_priority = allocation_priority  # Changed to match original naming
         self.max_size = max_size
         self.growth_rate = growth_rate
         self.initial_size = initial_size
@@ -82,6 +82,30 @@ class ResourcePool:
         relative_growth_rate = f_prime / f
         return relative_growth_rate
 
+    def compute_growth_demand(self, plant_thermal_time: float, thermal_time_increment: float, current_size: float) -> Tuple[float, float]:
+        """Demand by the resource pool is computed by the potential growth increment based on
+        thermal age of the resource pool and the thermal time increment from the previous timestep.
+        
+        Args:
+            plant_thermal_time: Current thermal age of the plant
+            thermal_time_increment: Thermal time increment for this timestep
+            current_size: Current size of the resource pool (not used in this implementation)
+            
+        Returns:
+            Tuple of (carbon_demand, nitrogen_demand)
+        """
+        self.RP_thermal_age = plant_thermal_time - self.thermal_time_initiation
+        if self.RP_thermal_age < 0:
+            self.RP_thermal_age = 0
+        relative_growth_rate = self.compute_relative_growth_rate(
+            self.RP_thermal_age, self.max_size, self.initial_size, self.growth_rate)
+        self.rgr = relative_growth_rate
+        total_demand = relative_growth_rate * self.current_size * thermal_time_increment
+        carbon_demand = total_demand
+        nitrogen_demand = 0.0
+        self.demand = carbon_demand  # Track demand for logging
+        return carbon_demand, nitrogen_demand
+        
     def compute_demand(self, plant_thermal_time: float, thermal_time_increment: float) -> float:
         """Compute demand by the resource pool based on potential growth.
         
@@ -92,20 +116,24 @@ class ResourcePool:
         Returns:
             Demand value - the amount of carbon required for potential growth
         """
-        self.RP_thermal_age = plant_thermal_time - self.thermal_time_initiation
-        if self.RP_thermal_age < 0:
-            self.RP_thermal_age = 0
-        relative_growth_rate = self.compute_relative_growth_rate(
-            self.RP_thermal_age, self.max_size, self.initial_size, self.growth_rate)
-        self.rgr = relative_growth_rate
-        demand = relative_growth_rate * self.current_size * thermal_time_increment
-        self.demand = demand
-        return demand
+        # Call the more detailed method and just return carbon demand
+        carbon_demand, _ = self.compute_growth_demand(plant_thermal_time, thermal_time_increment, self.current_size)
+        return carbon_demand
 
+    def receive_growth_allocation(self, allocated_carbon: float, allocated_nitrogen: float) -> None:
+        """Increment the resource pool based on allocation from the plant.
+        
+        Args:
+            allocated_carbon: Amount of carbon allocated to this pool
+            allocated_nitrogen: Amount of nitrogen allocated to this pool
+        """
+        self.current_size += allocated_carbon + allocated_nitrogen
+        
     def receive_carbon(self, allocated_carbon: float) -> None:
         """Increment the resource pool based on allocation from the plant.
         
         Args:
             allocated_carbon: Amount of carbon allocated to this pool
         """
-        self.current_size += allocated_carbon
+        # Call the more complete method for compatibility
+        self.receive_growth_allocation(allocated_carbon, 0.0)

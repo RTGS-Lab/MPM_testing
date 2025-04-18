@@ -5,6 +5,7 @@ import logging
 
 from .carbon_assimilation import CarbonAssimilation
 from .resource_pool import ResourcePool
+from .priority_queue import PriorityQueue
 
 class Plant:
     """Class representing the whole plant organism and its processes.
@@ -43,10 +44,13 @@ class Plant:
         self.__parameters = params_dict
         self.__thermal_age_increment = 0.0
         self.latitude = 0
+        self.__nitrogen_pool = 0.0  # Added nitrogen pool
         
         # Instantiate process objects to handle physiology
         self.carbon_assimilation = CarbonAssimilation(self.__parameters)
         self.__resource_pools = []
+        self.growth_priority_queue = None  # Will be initialized in create_resource_pools
+        self.maintenance_priority_queue = None  # Will be initialized in create_resource_pools
 
     def create_resource_pools(self) -> None:
         """Create resource pool objects based on resource pool parameters."""
@@ -60,6 +64,10 @@ class Plant:
                 growth_rate=rp['rate']
             ) for rp in self.resource_pool_params
         ]
+        
+        # Initialize priority queues
+        self.growth_priority_queue = PriorityQueue(self.__resource_pools, ResourcePool.compute_growth_demand)
+        # self.maintenance_priority_queue = PriorityQueue(self.__resource_pools, ResourcePool.compute_maintenance_demand)  # PLACEHOLDER
 
     def update_thermal_age(self, environmental_variables: Dict[str, float]) -> None:
         """Compute thermal age increment and update thermal age.
@@ -92,7 +100,7 @@ class Plant:
         self.__assimilation_sunlit, self.__assimilation_shaded = \
             self.carbon_assimilation.sunlit_shaded_photosynthesis(environmental_variables)
 
-    def compute_carbon_assimilated(self, environmental_variables: Dict[str, float]) -> None:
+    def update_carbon_pool(self, environmental_variables: Dict[str, float]) -> None:
         """Calculate carbon assimilated and update carbon pool.
         
         Converts photosynthesis rates from leaf area basis to plant basis by accounting for
@@ -127,8 +135,9 @@ class Plant:
     def allocate_carbon(self, environmental_variables: Dict[str, float]) -> None:
         """Allocate carbon to resource pools from the plant carbon pool.
         
-        Carbon is allocated to resource pools based on their priority and demand.
-        Resource pools with higher priority (lower numerical value) receive carbon first.
+        First updates the resource pool initiation status, then uses
+        the growth priority queue to allocate carbon. This method is retained
+        for compatibility with the refactored interface.
         
         Args:
             environmental_variables: Dictionary of environmental variables
@@ -136,35 +145,27 @@ class Plant:
         # Update initiation status of resource pools
         for rp in self.__resource_pools:
             rp.update_initiation_status(self.__thermal_age)
-
-        # Get only initiated resource pools
-        initiated_rps = [rp for rp in self.__resource_pools if rp.is_initiated]
-
-        # Compute resource pool demand
-        demands = {}
-        total_demand = 0.0
-
-        for rp in initiated_rps:
-            demand = rp.compute_demand(self.__thermal_age, self.__thermal_age_increment)
-            demands[rp] = demand
-            total_demand += demand
-
-        # Sort resource pools by allocation priority
-        sorted_rps = sorted(initiated_rps, key=lambda x: x.allocation_priority)
-
-        # Allocate carbon to each resource pool in priority order
-        for rp in sorted_rps:
-            allocation = min(demands[rp], self.__carbon_pool)
-            rp.receive_carbon(allocation)
-            self.__carbon_pool -= allocation
+            
+        # Use growth priority queue to allocate carbon 
+        self.carry_out_growth_allocation()
+        
+    def carry_out_growth_allocation(self) -> None:
+        """Allocates growth resources using the priority queue.
+        
+        This implements the original allocation logic using PriorityQueue.
+        """
+        self.__carbon_pool, self.__nitrogen_pool = self.growth_priority_queue.allocate_resources(
+            self.__carbon_pool, self.__nitrogen_pool, self.__thermal_age, self.__thermal_age_increment
+        )
 
     def update_leaf_area_index(self) -> None:
         """Update leaf area index based on first resource pool (assumed to be leaves).
         
         Leaf area index is calculated as the product of specific leaf area and
-        the size of the first resource pool (assumed to represent leaves).
+        the size of the first resource pool (assumed to represent leaves),
+        divided by the single plant ground area to convert to m²/m².
         """
-        self.__Leaf_Area_Index = self.__parameters['Specific_leaf_area'] * self.__resource_pools[0].current_size
+        self.__Leaf_Area_Index = self.__parameters['Specific_leaf_area'] * self.__resource_pools[0].current_size * 1/self.__parameters['Single_plant_ground_area']
 
     def simulate_plant(self, environmental_variables: Dict[str, float]) -> None:
         """Execute one model simulation step for the plant.
@@ -177,8 +178,12 @@ class Plant:
         """
         self.update_thermal_age(environmental_variables)
         self.carry_out_photosynthesis(environmental_variables)
-        self.compute_carbon_assimilated(environmental_variables)
-        self.allocate_carbon(environmental_variables)
+        self.update_carbon_pool(environmental_variables)
+        # Update initiation status before allocation
+        for rp in self.__resource_pools:
+            rp.update_initiation_status(self.__thermal_age)
+        # Use direct allocation from original implementation
+        self.carry_out_growth_allocation()
         self.update_leaf_area_index()
 
     # Getter methods
@@ -213,3 +218,7 @@ class Plant:
     def get_thermal_age(self) -> float:
         """Get thermal age in degree days."""
         return self.__thermal_age
+        
+    def get_nitrogen_pool(self) -> float:
+        """Get nitrogen pool size."""
+        return self.__nitrogen_pool

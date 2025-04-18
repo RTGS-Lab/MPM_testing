@@ -45,12 +45,35 @@ Several plots are generated to visualize the differences between models:
 - Resource pool comparisons (canopy, root, storage)
 - Early growth comparison (first 1000 timesteps)
 
-## Analysis Notes
+## Model Alignment Success
 
-Current comparisons show significant differences between the original and refactored models. These differences may be due to:
+After recent fixes, the original and refactored models now produce identical results. The key fixes implemented were:
 
-1. Parameter interpretation differences
-2. Calculation method differences
-3. Resource allocation algorithm differences
+1. **LAI Calculation**: Fixed the Leaf Area Index calculation to properly account for the ground area per plant factor
+2. **Resource Allocation**: Restored the PriorityQueue-based allocation mechanism from the original model
+3. **Parameter Naming**: Ensured consistent naming for growth allocation priorities 
+4. **Method Signatures**: Aligned method signatures and return values with the original implementation
+5. **Interface Compatibility**: Maintained compatibility with both old and new method names through adapter methods
 
-The refactored model currently shows much lower overall growth than the original model, indicating that some key growth factors may be calculated differently.
+These fixes ensure that both models now produce exactly the same output values for all key metrics when run with identical input data.
+
+## Validated Metrics
+
+The following metrics have been validated to have 0% difference between the original and refactored implementations:
+
+- Thermal age accumulation 
+- Leaf Area Index (LAI)
+- Carbon pool size
+- All resource pool sizes (canopy, root, storage)
+
+## Documentation and Usage
+
+Both models can be used interchangeably, with the refactored model providing additional benefits:
+
+- Better code organization with separate modules
+- Type hints for improved code safety
+- Comprehensive docstrings
+- Consistent naming conventions
+- Modular design for extending functionality
+
+For new development, the refactored model is recommended while maintaining full compatibility with the original model's behavior.

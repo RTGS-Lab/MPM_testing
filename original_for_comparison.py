@@ -684,11 +684,12 @@ class ResourcePool:
         self.current_size += allocated_carbon + allocated_nitrogen
 
 #@title Example simulation
-# Using local data files instead of GitHub URLs
-driver_file = 'examples/data/drivers_natural_all.csv'
-parameter_file = 'examples/data/parameters.csv'
-resource_pool_file = 'examples/data/resource_pools_3RPs.csv'
-
-model = ModelHandler(driver_file, parameter_file, resource_pool_file)
-model.run_simulation()
-model.plot_outputs()
+if __name__ == "__main__":
+    # Using local data files instead of GitHub URLs
+    driver_file = 'examples/data/drivers_natural_all.csv'
+    parameter_file = 'examples/data/parameters.csv'
+    resource_pool_file = 'examples/data/resource_pools_3RPs.csv'
+    
+    model = ModelHandler(driver_file, parameter_file, resource_pool_file)
+    model.run_simulation()
+    model.plot_outputs()
